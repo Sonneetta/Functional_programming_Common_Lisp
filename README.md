@@ -198,4 +198,25 @@ T
    (A 4 (B 1 2) NIL (D) B 1 2)
    ```
 ### Варіант 5(13):
-![var_5(13)](https://github.com/Sonneetta/Functional_programming_Common_Lisp/blob/main/var_5(13).jpg)
+![var_5(13).jpg](https://github.com/Sonneetta/Functional_programming_Common_Lisp/blob/main/var_5(13).jpg)
+
+Створіть список, що відповідає структурі списку, наведеній на рисунку (за варіантом).
+Для цього допускається використання не більше двох форм.
+
+Виконання завдання:
+1.
+```
+(set 'list_part '(4 E F)) 
+```
+Результат виконання:
+```
+(4 E F)
+```
+2.
+```
+(list 'd list_part '(5) (last list_part) )
+```
+Результат виконання:
+```
+(D (4 E F) (5) F)
+```
