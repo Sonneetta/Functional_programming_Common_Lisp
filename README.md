@@ -198,7 +198,7 @@ T
    (A 4 (B 1 2) NIL (D) B 1 2)
    ```
 ### Варіант 5(13):
-![var_5(13).jpg](https://github.com/Sonneetta/Functional_programming_Common_Lisp/blob/main/var_5(13).jpg)
+![var_5(13).jpg](https://github.com/Sonneetta/Functional_programming_Common_Lisp/blob/lab_1/var_5(13).jpg)
 
 Створіть список, що відповідає структурі списку, наведеній на рисунку (за варіантом).
 Для цього допускається використання не більше двох форм.
