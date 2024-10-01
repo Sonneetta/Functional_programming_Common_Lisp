@@ -119,7 +119,7 @@ NIL
   (check-my-function-2 "test-6" '((1 2)) '(2)))
 ```
 ### Тестування
-```lisp
+```
 (test-function-2) 
 Function 2 
 Passed!!!! test-1
