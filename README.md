@@ -181,7 +181,6 @@ NIL
 ```
 ### Тестування
 ```
-(load "main.lisp" )
 Function 3 
 Passed!!!! test-1
 Passed!!!! test-2
