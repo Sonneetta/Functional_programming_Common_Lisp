@@ -56,12 +56,12 @@ CL-USER> (decompress-list '((1 1) (2 a) (3 3) (1 4)))
 (defun remove-even-triples (lst &optional (index 1))
   "Рекурсивна функція, яка видаляє трійки послідовних елементів, які стоять на парних позиціях в списку."
   (cond
-    ((< (length lst) 3) lst)                                    ; Якщо список порожній або має менше трьох елементів
+    ((or (null lst) (null (cdr lst)) (null (cddr lst))) lst)    ; Якщо список порожній або має менше трьох елементів
     ((evenp index)                                              ; Якщо індекс парний, пропускаємо трійку і збільшуємо індекс
      (remove-even-triples (cdddr lst) (1+ index)))
     (t                                                          ; Якщо індекс непарний, зберігаємо трійку і продовжуємо
-     (append (list (car lst) (cadr lst) (caddr lst))
-             (remove-even-triples (cdddr lst) (1+ index))))))
+     (list* (car lst) (cadr lst) (caddr lst)
+            (remove-even-triples (cdddr lst) (1+ index))))))  
 
 ```
 ### Тестові набори
