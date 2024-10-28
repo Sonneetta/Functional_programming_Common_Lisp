@@ -1,86 +1,67 @@
-(defun remove-even-triples (lst &optional (index 1))
-  "Рекурсивна функція, яка видаляє трійки послідовних елементів, які стоять на парних позиціях в списку."
+(defun bubble-imper (list)
+  "Імперативний варіант алгоритму сортування обміном №2 (із використанням прапорця) за незменшенням."
+  (let ((a (copy-list list)))                 ; Копіюємо список, щоб не змінювати оригінал
+    (let* ((n (length a)) 
+           (flag t) 
+           (r (1- n)))                        ; Ініціалізація змінних, якими будемо працювати із списком
+      (do () ((not flag))                     ; Закінчуємо цикл, якщо flag є NIL
+        (setf flag nil)                       ; Скидаємо прапорець
+        (dotimes (i r)                        ; Проходимо через всі елементи до R
+          (when (> (nth i a) (nth (1+ i) a))
+            (rotatef (nth i a) (nth (1+ i) a)); Змінюємо місцями елементи
+            (setf flag t)))                   ; Встановлюємо flag в t
+      (decf r)))                              ; Зменшуємо R
+  a))                                         ; Повертаємо відсортований список
+
+(defun check-my-bubble-imper (name input expected)
+  "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
+  (format t "~:[Failed....~;Passed!!!!~] ~a~%" 
+          (equal (bubble-imper input) expected) 
+          name))
+
+(defun test-bubble-imper ()
+  "Тестові набори для першої  функції."
+  (format t "Function bubble-imper ~%")
+  (check-my-bubble-imper "test-1" '(1 2 3 4) '(1 2 3 4))       
+  (check-my-bubble-imper "test-2" nil nil)                           
+  (check-my-bubble-imper "test-3" '(4 3 2 1 0) '(0 1 2 3 4))
+  (check-my-bubble-imper "test-4" '(1 1 2 2) '(1 1 2 2 ))
+  (check-my-bubble-imper "test-5" '(1) '(1))
+  (check-my-bubble-imper"test-6" '(2 2 1 1 0) '(0 1 1 2 2))) 
+
+(defun bubble-func (list)                                                  ; Функція виконує один прохід бульбашкового сортування з прапором
   (cond
-    ((or (null lst) (null (cdr lst)) (null (cddr lst))) lst)    ; Якщо список порожній або має менше трьох елементів
-    ((evenp index)                                              ; Якщо індекс парний, пропускаємо трійку і збільшуємо індекс
-     (remove-even-triples (cdddr lst) (1+ index)))
-    (t                                                          ; Якщо індекс непарний, зберігаємо трійку і продовжуємо
-     (list* (car lst) (cadr lst) (caddr lst)
-            (remove-even-triples (cdddr lst) (1+ index))))))  
+    ((or (null list) (null (cdr list)))                                    ; Якщо список порожній або має один елемент, повертаємо його
+     (values list nil))                                                    ; Повертаємо список і прапор nil, оскільки змін не було
+     
+    ((> (car list) (cadr list))                                            ; Якщо перший елемент більше другого
+     (multiple-value-bind (remaining sorted-flag)                          ; Виконуємо рекурсивний виклик з оновленим списком
+         (bubble-func (cons (car list) (cddr list)))                       ; Створюємо новий список з першим елементом у кінці
+       (values (cons (cadr list) remaining) t)))                           ; Повертаємо оновлений список і прапор t, щоб позначити зміну
 
-(defun check-my-function-1 (name input expected)
+    (t                                                                     ; Інакше (якщо перший елемент менше або дорівнює другому)
+     (multiple-value-bind (remaining sorted-flag) (bubble-func (cdr list)) ; Рекурсивно опрацьовуємо решту списку
+       (values (cons (car list) remaining) sorted-flag)))))                ; Повертаємо список з початковим елементом і прапором
+
+(defun bubble-sort-func (list)                                             ; Основна функція бульбашкового сортування
+  (multiple-value-bind (sorted-lst flag) (bubble-func list)                ; Виконуємо прохід функції bubble-func
+    (if flag                                                               ; Якщо прапор true (тобто були зміни)
+        (bubble-sort-func sorted-lst)                                      ; Рекурсивно викликаємо bubble-sort-func для наступного проходу
+        sorted-lst)))                                                      ; Інакше (якщо змін не було) повертаємо відсортований список
+
+
+(defun check-my-bubble-func (name input expected)
   "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
   (format t "~:[Failed....~;Passed!!!!~] ~a~%" 
-          (equal (remove-even-triples input) expected) 
+          (equal (bubble-sort-func input) expected) 
           name))
 
-(defun test-function-1 ()
-  "Тестові набори для першої рекурсивної функції."
-  (format t "Function 1 ~%")
-  (check-my-function-1 "test-1" '(1 2 3 5 6 7 8) '(1 2 3 8))         
-  (check-my-function-1 "test-2" nil nil)                           
-  (check-my-function-1 "test-3" '(a b c) '(a b c))
-  (check-my-function-1 "test-4" '(a b c d a a) '(a b c))
-  (check-my-function-1 "test-5" '(a b c a b c a) '(a b c a))
-  (check-my-function-1 "test-6" '(a 1) '(a 1)))                        
-
-(defun decompress-list (lst)
-  "Основна функція, що обробляє список пар (кількість повторень та елемент)."
-  (if (null lst)                                              ; Якщо список порожній
-      nil                                                     ; Повертаємо nil
-      (let ((count (caar lst))                                ; Отримуємо кількість повторень з першої пари
-            (elem (cadar lst)))                               ; Отримуємо сам елемент з першої пари
-        (decompress-list-helper count elem (cdr lst)))))      ; Викликаємо допоміжну функцію
-
-(defun decompress-list-helper (count elem rest)
-  "Допоміжна функція, що додає елемент `elem` `count` разів і продовжує розпакування."
-  (if (<= count 0)                                            ; Якщо кількість повторень менша або дорівнює нулю
-      (decompress-list rest)                                  ; Продовжуємо з рештою списку
-      (cons elem                                              ; Якщо більше 0, додаємо елемент до результату
-            (decompress-list-helper (1- count) elem rest))))  ; Рекурсивно викликаємо, зменшуючи `count`
-
-(defun decompress-list-1 (lst &optional (result nil))
-  "Рекурсивна функція для розпакування зі списку, зберігаючи результати в зворотному порядку."
-  (if (null lst)                                                      ; Якщо список порожній
-      (nreverse result)                                                ; Повертаємо результат у правильному порядку
-      (let ((count (caar lst))                                        ; Отримуємо кількість повторень
-            (elem (cadar lst)))                                       ; Отримуємо сам елемент
-        (if (or (null count) (<= count 0))                            ; Якщо кількість повторень менша або дорівнює нулю
-            (decompress-list-1 (cdr lst) result)                      ; Продовжуємо з рештою списку
-            (decompress-list-1                                        ; Інакше, викликаємо з оновленим списком
-                             (cons (list (1- count) elem) (cdr lst))  ; Зменшуємо count на 1
-                             (cons elem result))))))                  ; Додаємо елемент до результату
-
-
-(defun check-my-function-2 (name input expected)
-  "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
-  (format t "~:[Failed....~;Passed!!!!~] ~a~%" 
-          (equal (decompress-list input) expected) 
-          name))
-
-(defun test-function-2 ()
-  "Тестові набори для другої рекурсивної функції."
-  (format t "Function 2 ~%")
-  (check-my-function-2 "test-1" '(() () ()) '())         
-  (check-my-function-2 "test-2" nil nil)                           
-  (check-my-function-2 "test-3" '((1 2) (2 1)) '(2 1 1))
-  (check-my-function-2 "test-4" '((1 a) (2 b) (0 c)) '(a b b))
-  (check-my-function-2 "test-5" '((0 2)) '())
-  (check-my-function-2 "test-6" '((1 2)) '(2)))
-
-(defun check-my-function-3 (name input expected)
-  "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
-  (format t "~:[Failed....~;Passed!!!!~] ~a~%" 
-          (equal (decompress-list-1 input) expected) 
-          name))
-
-(defun test-function-3 ()
-  "Тестові набори для другої рекурсивної функції."
-  (format t "Function 3 ~%")
-  (check-my-function-3 "test-1" '(() () ()) '())         
-  (check-my-function-3 "test-2" nil nil)                           
-  (check-my-function-3 "test-3" '((1 2) (2 1)) '(2 1 1))
-  (check-my-function-3 "test-4" '((1 a) (2 b) (0 c)) '(a b b))
-  (check-my-function-3 "test-5" '((0 2)) '())
-  (check-my-function-3 "test-6" '((1 2)) '(2)))
-
+(defun test-bubble-func ()
+  "Тестові набори для другої  функції."
+  (format t "Function bubble-imper ~%")
+  (check-my-bubble-func "test-1" '(1 2 3 4) '(1 2 3 4))       
+  (check-my-bubble-func "test-2" nil nil)                           
+  (check-my-bubble-func "test-3" '(4 3 2 1 0) '(0 1 2 3 4))
+  (check-my-bubble-func "test-4" '(1 1 2 2) '(1 1 2 2))
+  (check-my-bubble-func "test-5" '(1) '(1))
+  (check-my-bubble-func"test-6" '(2 2 1 1 0) '(0 1 1 2 2))) 
