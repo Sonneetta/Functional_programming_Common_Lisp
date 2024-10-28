@@ -20,7 +20,7 @@
           name))
 
 (defun test-bubble-imper ()
-  "Тестові набори для першої  функції."
+  "Тестові набори для імперативного варіанту"
   (format t "Function bubble-imper ~%")
   (check-my-bubble-imper "test-1" '(1 2 3 4) '(1 2 3 4))       
   (check-my-bubble-imper "test-2" nil nil)                           
@@ -57,7 +57,7 @@
           name))
 
 (defun test-bubble-func ()
-  "Тестові набори для другої  функції."
+  "Тестові набори для функціонального варіанту
   (format t "Function bubble-imper ~%")
   (check-my-bubble-func "test-1" '(1 2 3 4) '(1 2 3 4))       
   (check-my-bubble-func "test-2" nil nil)                           
