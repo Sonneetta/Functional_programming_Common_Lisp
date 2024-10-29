@@ -32,15 +32,14 @@
 (defun bubble-func (list)                                                  ; Функція виконує один прохід бульбашкового сортування з прапором
   (cond
     ((or (null list) (null (cdr list)))                                    ; Якщо список порожній або має один елемент, повертаємо його
-     (values list nil))                                                    ; Повертаємо список і прапор nil, оскільки змін не було
-     
+     (values list nil))                                                    ; Повертаємо список і прапор nil, оскільки змін не було 
     ((> (car list) (cadr list))                                            ; Якщо перший елемент більше другого
      (multiple-value-bind (remaining sorted-flag)                          ; Виконуємо рекурсивний виклик з оновленим списком
-         (bubble-func (cons (car list) (cddr list)))                       ; Створюємо новий список з першим елементом у кінці
-       (values (cons (cadr list) remaining) t)))                           ; Повертаємо оновлений список і прапор t, щоб позначити зміну
-
+       (bubble-func (cons (car list) (cddr list)))                         ; Створюємо новий список з першим елементом у кінці
+       (values (cons (cadr list) remaining) t)))                                                                                                                                                                                                                         ; Повертаємо оновлений список і прапор t, щоб позначити зміну
     (t                                                                     ; Інакше (якщо перший елемент менше або дорівнює другому)
-     (multiple-value-bind (remaining sorted-flag) (bubble-func (cdr list)) ; Рекурсивно опрацьовуємо решту списку
+     (multiple-value-bind (remaining sorted-flag) 
+       (bubble-func (cdr list))                                            ; Рекурсивно опрацьовуємо решту списку
        (values (cons (car list) remaining) sorted-flag)))))                ; Повертаємо список з початковим елементом і прапором
 
 (defun bubble-sort-func (list)                                             ; Основна функція бульбашкового сортування
@@ -57,7 +56,7 @@
           name))
 
 (defun test-bubble-func ()
-  "Тестові набори для функціонального варіанту
+  "Тестові набори для функціонального варіанту"
   (format t "Function bubble-imper ~%")
   (check-my-bubble-func "test-1" '(1 2 3 4) '(1 2 3 4))       
   (check-my-bubble-func "test-2" nil nil)                           

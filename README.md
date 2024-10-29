@@ -19,22 +19,21 @@
 (defun bubble-func (list)                                                  ; Функція виконує один прохід бульбашкового сортування з прапором
   (cond
     ((or (null list) (null (cdr list)))                                    ; Якщо список порожній або має один елемент, повертаємо його
-     (values list nil))                                                    ; Повертаємо список і прапор nil, оскільки змін не було
-     
+     (values list nil))                                                    ; Повертаємо список і прапор nil, оскільки змін не було 
     ((> (car list) (cadr list))                                            ; Якщо перший елемент більше другого
      (multiple-value-bind (remaining sorted-flag)                          ; Виконуємо рекурсивний виклик з оновленим списком
-         (bubble-func (cons (car list) (cddr list)))                       ; Створюємо новий список з першим елементом у кінці
-       (values (cons (cadr list) remaining) t)))                           ; Повертаємо оновлений список і прапор t, щоб позначити зміну
-
+       (bubble-func (cons (car list) (cddr list)))                         ; Створюємо новий список з першим елементом у кінці
+       (values (cons (cadr list) remaining) t)))                                                                                                                                                                                                                         ; Повертаємо оновлений список і прапор t, щоб позначити зміну
     (t                                                                     ; Інакше (якщо перший елемент менше або дорівнює другому)
-     (multiple-value-bind (remaining sorted-flag) (bubble-func (cdr list)) ; Рекурсивно опрацьовуємо решту списку
+     (multiple-value-bind (remaining sorted-flag) 
+       (bubble-func (cdr list))                                            ; Рекурсивно опрацьовуємо решту списку
        (values (cons (car list) remaining) sorted-flag)))))                ; Повертаємо список з початковим елементом і прапором
 
 (defun bubble-sort-func (list)                                             ; Основна функція бульбашкового сортування
   (multiple-value-bind (sorted-lst flag) (bubble-func list)                ; Виконуємо прохід функції bubble-func
     (if flag                                                               ; Якщо прапор true (тобто були зміни)
         (bubble-sort-func sorted-lst)                                      ; Рекурсивно викликаємо bubble-sort-func для наступного проходу
-        sorted-lst)))                                                      ; Інакше (якщо змін не було) повертаємо відсортований список
+        sorted-lst)))  
 ```
 ### Тестові набори
 ```lisp
