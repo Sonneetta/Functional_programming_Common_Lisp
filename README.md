@@ -103,7 +103,20 @@ CL-USER> (mapcar (add-prev-fn) '(1 2 3))
 CL-USER> (mapcar (add-prev-fn :transform #'1+) '(1 2 3))
 ((2 . NIL) (3 . 2) (4 . 3))
 ```
-##Лістинг реалізації другої частини завдання
+## Лістинг реалізації другої частини завдання 
+```lisp
+(defun add-prev-fn (&key (transform 'identity))
+  "Функція, яка повертає функцію для обробки списку, що створює пари (поточний елемент . попередній елемент).
+   Якщо передано transform, застосовує його до поточного та попереднього елементів."
+   ;;Створюємо замикання з попереднім значенням 
+   (let ((prev nil))
+        (lambda (current)
+            (let ((transformed-current (if transform (funcall transform current) current))
+                 (transformed-prev (if transform (if prev (funcall transform prev) nil) prev)))
+            (prog1
+                (cons transformed-current transformed-prev)
+                (setf prev current))))))
+```
 ### Тестові набори та утиліти другої частини
 ```lisp
 (defun check-add-prev-fn (name input expected &key (transform 'identity))
