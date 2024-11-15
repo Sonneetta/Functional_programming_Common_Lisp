@@ -54,7 +54,7 @@
 
 (defun test-bubble-func ()
   "Тестові набори для першої функції."
-  (format t "Function bubble-imper ~%")
+  (format t "Testing bubble-func ~%")
 
   ;;Тести за замовчуванням
   (check-my-bubble-func "test-1" '(1 2 3 4) '(1 2 3 4))       
@@ -79,8 +79,8 @@
 ```
 ### Тестування першої частини
 ```lisp
-* (test-bubble-func )
-Function bubble-imper 
+* (test-bubble-func) 
+Testing bubble-func 
 Passed!!!! test-1
 Passed!!!! test-2
 Passed!!!! test-3
@@ -103,6 +103,50 @@ CL-USER> (mapcar (add-prev-fn) '(1 2 3))
 CL-USER> (mapcar (add-prev-fn :transform #'1+) '(1 2 3))
 ((2 . NIL) (3 . 2) (4 . 3))
 ```
-## Лістинг функції з використанням деструктивного підходу
-### Тестові набори та утиліти
-### Тестування
+##Лістинг реалізації другої частини завдання
+### Тестові набори та утиліти другої частини
+```lisp
+(defun check-add-prev-fn (name input expected &key (transform 'identity))
+  "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
+  (let ((result (mapcar (add-prev-fn :transform transform) input)))
+    (format t "~:[Failed....~;Passed!!!!~] ~a~%"
+            (equal result expected)
+            name)
+    (when (not (equal result expected))
+      (format t "  Expected: ~a~%  Got: ~a~%~%" expected result))))
+
+(defun test-add-prev-fn ()
+  "Тестові набори для функції add-prev-fn."
+  (format t "Testing add-prev-fn ~%")
+  
+  ;; Тести без transform
+  (check-add-prev-fn "test-1" '(1 2 3) '((1 . NIL) (2 . 1) (3 . 2)))
+  (check-add-prev-fn "test-2" nil nil)
+  (check-add-prev-fn "test-3" '(4 3 2 1) '((4 . NIL) (3 . 4) (2 . 3) (1 . 2)))
+  (check-add-prev-fn "test-4" '(1 1 2 2) '((1 . NIL) (1 . 1) (2 . 1) (2 . 2)))
+  (check-add-prev-fn "test-5" '(42) '((42 . NIL)))
+  
+  ;; Тести з використанням transform
+  (check-add-prev-fn "test-6" '(1 2 3) '((2 . NIL) (3 . 2) (4 . 3)) :transform #'1+)
+  (check-add-prev-fn "test-7" '(2 4 6) '((4 . NIL) (8 . 4) (12 . 8)) :transform (lambda (x) (* 2 x)))
+  (check-add-prev-fn "test-8" '("a" "ab" "abc") '(("A" . NIL) ("AB" . "A") ("ABC" . "AB")) :transform #'string-upcase)
+  (check-add-prev-fn "test-6" '(1 2 3) '((0 . NIL) (1 . 0) (2 . 1)) :transform #'1-)
+  (check-add-prev-fn "test-10" '(1 2 3) '((3 . NIL) (6 . 3) (9 . 6)) :transform (lambda (x) (* 3 x))))
+
+```
+### Тестування другої частини
+```lisp
+* (test-add-prev-fn) 
+Testing add-prev-fn 
+Passed!!!! test-1
+Passed!!!! test-2
+Passed!!!! test-3
+Passed!!!! test-4
+Passed!!!! test-5
+Passed!!!! test-6
+Passed!!!! test-7
+Passed!!!! test-8
+Passed!!!! test-6
+Passed!!!! test-10
+NIL
+```
