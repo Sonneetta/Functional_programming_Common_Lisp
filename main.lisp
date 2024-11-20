@@ -54,14 +54,17 @@
 (defun add-prev-fn (&key (transform 'identity))
   "Функція, яка повертає функцію для обробки списку, що створює пари (поточний елемент . попередній елемент).
    Якщо передано transform, застосовує його до поточного та попереднього елементів."
-   ;;Створюємо замикання з попереднім значенням 
-   (let ((prev nil))
-        (lambda (current)
-            (let ((transformed-current (if transform (funcall transform current) current))
-                 (transformed-prev (if transform (if prev (funcall transform prev) nil) prev)))
-            (prog1
-                (cons transformed-current transformed-prev)
-                (setf prev current))))))
+  (let ((transformed-prev nil)               
+        (first-call t))                       
+    (lambda (current)
+      (let* ((transformed-current (funcall transform current))  
+             (result (if first-call                             
+                         (list transformed-current)             
+                         (cons transformed-current transformed-prev)))) 
+        (setf first-call nil)                  
+        (setf transformed-prev transformed-current)            
+        result))))
+
 
 (defun check-add-prev-fn (name input expected &key (transform 'identity))
   "Функція, яка виконує перевірку фактичного результату з очікуваним і виводить повідомлення про те, чи пройшла перевірка."
@@ -88,7 +91,9 @@
   (check-add-prev-fn "test-7" '(2 4 6) '((4 . NIL) (8 . 4) (12 . 8)) :transform (lambda (x) (* 2 x)))
   (check-add-prev-fn "test-8" '("a" "ab" "abc") '(("A" . NIL) ("AB" . "A") ("ABC" . "AB")) :transform #'string-upcase)
   (check-add-prev-fn "test-6" '(1 2 3) '((0 . NIL) (1 . 0) (2 . 1)) :transform #'1-)
-  (check-add-prev-fn "test-10" '(1 2 3) '((3 . NIL) (6 . 3) (9 . 6)) :transform (lambda (x) (* 3 x))))
-
+  (check-add-prev-fn "test-10" '(1 2 3) '((3 . NIL) (6 . 3) (9 . 6)) :transform (lambda (x) (* 3 x)))
+  ;; Тестування випадку, коли список для `mapcar` при використанні `add-prev-fn` складатиметься з
+  ;; символів і чисел і міститиме nil, а `transform` буде `#'not`
+  (check-add-prev-fn "test" '(1 t nil t) '((nil) (nil) (t) (nil . t)) :transform #'not))  
   "(test-bubble-func)
   (test-add-prev-fn)"
