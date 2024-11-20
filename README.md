@@ -108,14 +108,10 @@ CL-USER> (mapcar (add-prev-fn :transform #'1+) '(1 2 3))
 (defun add-prev-fn (&key (transform 'identity))
   "Функція, яка повертає функцію для обробки списку, що створює пари (поточний елемент . попередній елемент).
    Якщо передано transform, застосовує його до поточного та попереднього елементів."
-  (let ((transformed-prev nil)               
-        (first-call t))                       
+  (let ((transformed-prev nil))                       
     (lambda (current)
       (let* ((transformed-current (funcall transform current))  
-             (result (if first-call                             
-                         (list transformed-current)             
-                         (cons transformed-current transformed-prev)))) 
-        (setf first-call nil)                  
+             (result (cons transformed-current transformed-prev)))                 
         (setf transformed-prev transformed-current)            
         result))))
 
