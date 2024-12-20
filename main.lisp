@@ -41,41 +41,26 @@
     (nreverse result)))
 
 (defun read-manufacturers-table (filename)
-  "Зчитує таблицю з файлу і повертає список структур manufacturers."
+  "Зчитує таблицю з файлу і повертає список структур manufacturer."
   (let ((manufacturers '()))
     (with-open-file (stream filename :direction :input)
-      (read-line stream)
+      (read-line stream) 
       (loop for line = (read-line stream nil nil)
             while line
-            do (let* ((fields (split-string-custom line #\,))
-                      (id (parse-integer (nth 0 fields))) 
-                      (name (string-trim '(#\Space) (nth 1 fields)))
-                      (country (string-trim '(#\Space) (nth 2 fields)))) 
-                 (push (make-manufacturer :id id
-                                          :name name
-                                          :country country)
-                       manufacturers))))
+            do (let ((fields (split-string-custom line #\,)))
+                 (push (make-manufacturers-from-list fields) manufacturers))))
     (nreverse manufacturers)))
 
 (defun read-drones-table (filename)
-  "Зчитує таблицю з файлу і повертає список структур drones."
+  "Зчитує таблицю з файлу і повертає список структур drone."
   (let ((drones '()))
     (with-open-file (stream filename :direction :input)
-      (read-line stream)
+      (read-line stream) 
       (loop for line = (read-line stream nil nil)
             while line
-            do (let* ((fields (split-string-custom line #\,))
-                      (id (parse-integer (nth 0 fields))) 
-                      (manufacturer-id (parse-integer  (nth 1 fields))) 
-                      (model (string-trim '(#\Space) (nth 2 fields))) 
-                      (price (parse-integer (nth 3 fields))))
-                 (push (make-drone :id id
-                                      :manufacturer-id manufacturer-id 
-                                      :model model
-                                      :price price)
-                       drones))))
-    (nreverse drones)))    
-
+            do (let ((fields (split-string-custom line #\,)))
+                 (push (make-drone-from-list fields) drones))))
+    (nreverse drones)))
 
 (defun select (filename filter-fn)
   "Зчитує таблицю з файлу, а потім повертає лямбда-вираз для фільтрації записів за допомогою FILTER-FN."
