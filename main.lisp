@@ -62,29 +62,55 @@
                  (push (make-drone-from-list fields) drones))))
     (nreverse drones)))
 
-(defun select (filename record-type filter-fn)
-  "Зчитує таблицю з файлу FILENAME, використовуючи RECORD-TYPE для визначення типу записів.
-Фільтрує записів за допомогою FILTER-FN."
-  (lambda ()
-    (let ((records (case record-type
-                     (:manufacturer (read-manufacturers-table filename))
-                     (:drone (read-drones-table filename))
-                     (otherwise (error "Unknown record type: ~A" record-type)))))
-      (remove-if-not filter-fn records))))
+(defun select (filepath key &rest filters)
+  "Читає файл FILENAME та застосовує фільтри до відповідних структур, зберігаючи ключі та значення для фільтрації."
+  (let* ((struct-map '((:manufacturer . make-manufacturer)
+                       (:drone . make-drone))) 
+         (constructor (cdr (assoc key struct-map))))     
+    (unless constructor
+      (error "Unknown key: ~A. Expected :manufacturer or :drone" key))
+    (lambda ()
+      (let ((data (case key
+                    (:manufacturer (read-manufacturers-table filepath))
+                    (:drone (read-drones-table filepath)))))
+        (if filters
+            (let* ((filter-pairs (loop for (filter-key value) on filters by #'cddr
+                                       collect (cons filter-key value))))
+              (remove-if-not
+               (lambda (item)
+                 (every (lambda (filter)
+                          (let* ((field (slot-value item (intern (symbol-name (car filter)))))
+                                 (filter-value (cdr filter)))
+                            (string= (write-to-string field)
+                                     (write-to-string filter-value))))
+                        filter-pairs))
+               data))
+            data)))))
 
 (defun test-select ()
-  "Тестує функцію SELECT з умовами фільтрації."
+  "Тестує функцію SELECT з різними умовами фільтрації."
   (let* ((manufacturers-file "manufacturers.csv")
          (drones-file "drones.csv")
-         (filter-manufacturers (select manufacturers-file :manufacturer
-                                       (lambda (manufacturer)
-                                         (string= (manufacturer-name manufacturer) "Aerovironment"))))
-         (filter-drones (select drones-file :drone
-                                (lambda (drone)
-                                  (= (drone-manufacturer-id drone) 1)))))
 
-    (format t "~&--- Filtered Manufacturers (Manufacturer Name = Aerovironment) ---~%")
-    (dolist (manufacturer (funcall filter-manufacturers))
+         ;; Фільтрування виробників за назвою
+         (filter-manufacturers-by-name 
+          (select manufacturers-file :manufacturer :name "Aerovironment"))
+
+         ;; Фільтрування дронів за ID виробника
+         (filter-drones-by-manufacturer-id
+          (select drones-file :drone :manufacturer-id 1))
+
+         ;; Фільтрування дронів за моделлю
+         (filter-drones-by-model
+          (select drones-file :drone :model "Phantom"))
+
+         ;; Фільтрування дронів за ціною
+         (filter-drones-by-price
+          (select drones-file :drone :price 7000)))
+
+    ;; Виведення результатів
+    (format t "~&--- Filtered Manufacturers (Name = Aerovironment) ---~%")
+    (dolist (manufacturer (funcall filter-manufacturers-by-name))
       (format t "ID: ~A~%Name: ~A~%Country: ~A~%"
               (manufacturer-id manufacturer)
               (manufacturer-name manufacturer)
@@ -92,13 +118,32 @@
       (format t "------------------------~%"))
 
     (format t "~&--- Filtered Drones (Manufacturer ID = 1) ---~%")
-    (dolist (drone (funcall filter-drones))
+    (dolist (drone (funcall filter-drones-by-manufacturer-id))
+      (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
+              (drone-id drone)
+              (drone-model drone)
+              (drone-price drone))
+      (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
+      (format t "------------------------~%"))
+
+    (format t "~&--- Filtered Drones (Model = Phantom) ---~%")
+    (dolist (drone (funcall filter-drones-by-model))
+      (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
+              (drone-id drone)
+              (drone-model drone)
+              (drone-price drone))
+      (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
+      (format t "------------------------~%"))
+
+    (format t "~&--- Filtered Drones (Price = 7000) ---~%")
+    (dolist (drone (funcall filter-drones-by-price))
       (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
               (drone-id drone)
               (drone-model drone)
               (drone-price drone))
       (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
       (format t "------------------------~%"))))
+
 
 (defun test-read-from-tabels ()
   "Тестує зчитування таблиць і виводить їх."
@@ -150,7 +195,7 @@
 (defun test-transform-to-hash ()
   "Тестує перетворення даних drone та manufacturer у геш-таблиці."
   (format t "~&--- Manufacturers ---~%")
-  (let* ((manufacturers (select "manufacturers.csv" :manufacturer #'identity))
+  (let* ((manufacturers (select "manufacturers.csv" :manufacturer))  
          (hashtables (convert-manufacturers-to-hashtables (funcall manufacturers))))
     (dolist (ht hashtables)
       (maphash (lambda (key value) 
@@ -159,7 +204,7 @@
 
   (format t "~&~%")
   (format t "--- Drones ---~%")
-  (let* ((drones (select "drones.csv" :drone #'identity))
+  (let* ((drones (select "drones.csv" :drone))  
          (hashtables (convert-drones-to-hashtables (funcall drones))))
     (dolist (ht hashtables)
       (maphash (lambda (key value) 
@@ -197,12 +242,8 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
   "Тестує функції запису даних у CSV для manufacturer та drone."
   (let* ((manufacturers-file "manufacturers_out.csv")
          (drones-file "drones_out.csv")
-         (filter-manufacturers (select "manufacturers.csv" :manufacturer
-                                       (lambda (manufacturer)
-                                         (= (manufacturer-id manufacturer) 3))))
-         (filter-drones (select "drones.csv" :drone
-                                (lambda (drone)
-                                  (string= (drone-model drone) "Phantom")))))
+         (filter-manufacturers (select "manufacturers.csv" :manufacturer :id 3))  
+         (filter-drones (select "drones.csv" :drone :model "Phantom")))  
 
     (write-manufacturers-to-csv manufacturers-file (funcall filter-manufacturers) t)
     (write-drones-to-csv drones-file (funcall filter-drones) t)
@@ -213,6 +254,7 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
             while line
             do (format t "~A~%" line)))
     
+    (format t "~&~%")
     (format t "~&--- Written drones CSV ---~%")
     (with-open-file (stream drones-file :direction :input)
       (loop for line = (read-line stream nil)

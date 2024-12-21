@@ -53,13 +53,15 @@ CSV файлів. При зчитуванні записів з таблиць, 
 (defstruct manufacturer
   id         
   name       
-  country)   
+  country
+)
 
 (defstruct drone
   id              
   manufacturer-id 
   model           
-  price)   
+  price
+)         
 
 (defun make-manufacturers-from-list (fields)
   "Створює структуру manufacturers зі списку полів."
@@ -91,49 +93,51 @@ CSV файлів. При зчитуванні записів з таблиць, 
     (nreverse result)))
 
 (defun read-manufacturers-table (filename)
-  "Зчитує таблицю з файлу і повертає список структур manufacturers."
+  "Зчитує таблицю з файлу і повертає список структур manufacturer."
   (let ((manufacturers '()))
     (with-open-file (stream filename :direction :input)
-      (read-line stream)
+      (read-line stream) 
       (loop for line = (read-line stream nil nil)
             while line
-            do (let* ((fields (split-string-custom line #\,))
-                      (id (parse-integer (nth 0 fields))) 
-                      (name (string-trim '(#\Space) (nth 1 fields)))
-                      (country (string-trim '(#\Space) (nth 2 fields)))) 
-                 (push (make-manufacturer :id id
-                                          :name name
-                                          :country country)
-                       manufacturers))))
+            do (let ((fields (split-string-custom line #\,)))
+                 (push (make-manufacturers-from-list fields) manufacturers))))
     (nreverse manufacturers)))
 
 (defun read-drones-table (filename)
-  "Зчитує таблицю з файлу і повертає список структур drones."
+  "Зчитує таблицю з файлу і повертає список структур drone."
   (let ((drones '()))
     (with-open-file (stream filename :direction :input)
-      (read-line stream)
+      (read-line stream) 
       (loop for line = (read-line stream nil nil)
             while line
-            do (let* ((fields (split-string-custom line #\,))
-                      (id (parse-integer (nth 0 fields))) 
-                      (manufacturer-id (parse-integer  (nth 1 fields))) 
-                      (model (string-trim '(#\Space) (nth 2 fields))) 
-                      (price (parse-integer (nth 3 fields))))
-                 (push (make-drone :id id
-                                      :manufacturer-id manufacturer-id 
-                                      :model model
-                                      :price price)
-                       drones))))
-    (nreverse drones)))    
+            do (let ((fields (split-string-custom line #\,)))
+                 (push (make-drone-from-list fields) drones))))
+    (nreverse drones)))
 
-
-(defun select (filename filter-fn)
-  "Зчитує таблицю з файлу, а потім повертає лямбда-вираз для фільтрації записів за допомогою FILTER-FN."
-  (lambda ()
-    (let ((records (if (search "manufacturers.csv" filename)
-                       (read-manufacturers-table filename)
-                       (read-drones-table filename))))
-      (remove-if-not filter-fn records))))
+(defun select (filepath key &rest filters)
+  "Читає файл FILENAME та застосовує фільтри до відповідних структур, зберігаючи ключі та значення для фільтрації."
+  (let* ((struct-map '((:manufacturer . make-manufacturer)
+                       (:drone . make-drone))) 
+         (constructor (cdr (assoc key struct-map))))     
+    (unless constructor
+      (error "Unknown key: ~A. Expected :manufacturer or :drone" key))
+    (lambda ()
+      (let ((data (case key
+                    (:manufacturer (read-manufacturers-table filepath))
+                    (:drone (read-drones-table filepath)))))
+        (if filters
+            (let* ((filter-pairs (loop for (filter-key value) on filters by #'cddr
+                                       collect (cons filter-key value))))
+              (remove-if-not
+               (lambda (item)
+                 (every (lambda (filter)
+                          (let* ((field (slot-value item (intern (symbol-name (car filter)))))
+                                 (filter-value (cdr filter)))
+                            (string= (write-to-string field)
+                                     (write-to-string filter-value))))
+                        filter-pairs))
+               data))
+            data)))))
 
 (defun manufacturer-to-hashtable (manufacturer)
   "Перетворює структуру manufacturer у геш-таблицю."
@@ -172,7 +176,6 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
               (manufacturer-name record)
               (manufacturer-country record)))))
 
-
 (defun write-drones-to-csv (file-path records &optional write-headers)
   "Записує список структур drone у файл CSV.
 WRITE-HEADERS - якщо T, додає заголовки до CSV."
@@ -210,37 +213,68 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
             (drone-model drone)
             (drone-price drone)))
   (format t "~A~%" (make-string 50 :initial-element #\-)))
- 
+
+
 ```
 ### Тестові набори та утиліти
 ```lisp
 (defun test-select ()
-  "Тестує функцію SELECT з умовами фільтрації."
+  "Тестує функцію SELECT з різними умовами фільтрації."
   (let* ((manufacturers-file "manufacturers.csv")
          (drones-file "drones.csv")
-         (filter-manufacturers (select manufacturers-file
-                                  (lambda (manufacturer)
-                                    (string=  (manufacturer-name manufacturer) "Aerovironment"))))
-         (filter-drones (select drones-file
-                                   (lambda (drone)
-                                     (= (drone-manufacturer-id drone) 1)))))  ;; виправлено тут
-    
-    (format t "~&--- Filtered Manufacturers (Manufacturer Name = Aerovironment) ---~%")
-    (dolist (manufacturer (funcall filter-manufacturers))
-      (format t "ID: ~A~%Name: ~A~%Country: ~A~%" 
+
+         ;; Фільтрування виробників за назвою
+         (filter-manufacturers-by-name 
+          (select manufacturers-file :manufacturer :name "Aerovironment"))
+
+         ;; Фільтрування дронів за ID виробника
+         (filter-drones-by-manufacturer-id
+          (select drones-file :drone :manufacturer-id 1))
+
+         ;; Фільтрування дронів за моделлю
+         (filter-drones-by-model
+          (select drones-file :drone :model "Phantom"))
+
+         ;; Фільтрування дронів за ціною
+         (filter-drones-by-price
+          (select drones-file :drone :price 7000)))
+
+    ;; Виведення результатів
+    (format t "~&--- Filtered Manufacturers (Name = Aerovironment) ---~%")
+    (dolist (manufacturer (funcall filter-manufacturers-by-name))
+      (format t "ID: ~A~%Name: ~A~%Country: ~A~%"
               (manufacturer-id manufacturer)
               (manufacturer-name manufacturer)
               (manufacturer-country manufacturer))
       (format t "------------------------~%"))
 
-    (format t "~&--- Filtered Drones (Manufacturer Id = 1) ---~%")
-    (dolist (drone (funcall filter-drones))
-      (format t "ID: ~A~%Model: ~A~%Price: ~A~%" 
+    (format t "~&--- Filtered Drones (Manufacturer ID = 1) ---~%")
+    (dolist (drone (funcall filter-drones-by-manufacturer-id))
+      (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
+              (drone-id drone)
+              (drone-model drone)
+              (drone-price drone))
+      (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
+      (format t "------------------------~%"))
+
+    (format t "~&--- Filtered Drones (Model = Phantom) ---~%")
+    (dolist (drone (funcall filter-drones-by-model))
+      (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
+              (drone-id drone)
+              (drone-model drone)
+              (drone-price drone))
+      (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
+      (format t "------------------------~%"))
+
+    (format t "~&--- Filtered Drones (Price = 7000) ---~%")
+    (dolist (drone (funcall filter-drones-by-price))
+      (format t "ID: ~A~%Model: ~A~%Price: ~A~%"
               (drone-id drone)
               (drone-model drone)
               (drone-price drone))
       (format t "Manufacturer ID: ~A~%" (drone-manufacturer-id drone))
       (format t "------------------------~%"))))
+
 
 (defun test-read-from-tabels ()
   "Тестує зчитування таблиць і виводить їх."
@@ -265,8 +299,8 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
 
 (defun test-transform-to-hash ()
   "Тестує перетворення даних drone та manufacturer у геш-таблиці."
-  (format t "~&---  Manufacturers ---~%")
-  (let* ((manufacturers (select "manufacturers.csv" #'identity))
+  (format t "~&--- Manufacturers ---~%")
+  (let* ((manufacturers (select "manufacturers.csv" :manufacturer))  
          (hashtables (convert-manufacturers-to-hashtables (funcall manufacturers))))
     (dolist (ht hashtables)
       (maphash (lambda (key value) 
@@ -274,8 +308,8 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
                ht)))
 
   (format t "~&~%")
-  (format t "~&---  Drones ---~%")
-  (let* ((drones (select "drones.csv" #'identity))
+  (format t "--- Drones ---~%")
+  (let* ((drones (select "drones.csv" :drone))  
          (hashtables (convert-drones-to-hashtables (funcall drones))))
     (dolist (ht hashtables)
       (maphash (lambda (key value) 
@@ -286,12 +320,8 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
   "Тестує функції запису даних у CSV для manufacturer та drone."
   (let* ((manufacturers-file "manufacturers_out.csv")
          (drones-file "drones_out.csv")
-         (filter-manufacturers (select "manufacturers.csv"
-                                  (lambda (manufacturer)
-                                    (= (manufacturer-id manufacturer) 3))))
-         (filter-drones (select "drones.csv"
-                                   (lambda (drone)
-                                     (string= (drone-model drone) "Phantom")))))
+         (filter-manufacturers (select "manufacturers.csv" :manufacturer :id 3))  
+         (filter-drones (select "drones.csv" :drone :model "Phantom")))  
 
     (write-manufacturers-to-csv manufacturers-file (funcall filter-manufacturers) t)
     (write-drones-to-csv drones-file (funcall filter-drones) t)
@@ -302,11 +332,13 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
             while line
             do (format t "~A~%" line)))
     
+    (format t "~&~%")
     (format t "~&--- Written drones CSV ---~%")
     (with-open-file (stream drones-file :direction :input)
       (loop for line = (read-line stream nil)
             while line
             do (format t "~A~%" line)))))
+
 
 (defun test-pretty-print ()
   "Тестує красивий вивід записів таблиці."
@@ -317,7 +349,6 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
 
     (format t "~%------------------ Drones Table ------------------~%")
     (print-drones-table drones)))
-
 
 (defun run-all-tests ()
   "Виконує всі тести."
@@ -335,19 +366,18 @@ WRITE-HEADERS - якщо T, додає заголовки до CSV."
 
   (format t "~%--- Running Test: test-pretty-print ---~%")
   (test-pretty-print))
-
 ```
 ### Тестування
 ```lisp
-* (run-all-tests)             
+* (run-all-tests)
 
 --- Running Test: test-select ---
---- Filtered Manufacturers (Manufacturer Name = Aerovironment) ---
-ID: 3
-Name: Aerovironment
+--- Filtered Manufacturers (Name = Aerovironment) ---
+ID: 4
+Name: Skydio
 Country: USA
 ------------------------
---- Filtered Drones (Manufacturer Id = 1) ---
+--- Filtered Drones (Manufacturer ID = 1) ---
 ID: 1
 Model: Mavic Air
 Price: 799
@@ -357,6 +387,18 @@ ID: 2
 Model: Phantom
 Price: 1499
 Manufacturer ID: 1
+------------------------
+--- Filtered Drones (Model = Phantom) ---
+ID: 2
+Model: Phantom
+Price: 1499
+Manufacturer ID: 1
+------------------------
+--- Filtered Drones (Price = 7000) ---
+ID: 3
+Model: ANAFI USA
+Price: 7000
+Manufacturer ID: 2
 ------------------------
 
 --- Running Test: test-read-from-tabels ---
@@ -405,7 +447,7 @@ Manufacturer ID: 4
 ------------------------
 
 --- Running Test: test-transform-to-hash ---
----  Manufacturers ---
+--- Manufacturers ---
 ID: 1
 NAME: DJI
 COUNTRY: China
@@ -419,7 +461,7 @@ ID: 4
 NAME: Skydio
 COUNTRY: USA
 
----  Drones ---
+--- Drones ---
 ID: 1
 MANUFACTURER-ID: 1
 MODEL: Mavic Air
@@ -445,6 +487,7 @@ PRICE: 1099
 --- Written manufacturers CSV ---
 ID,Name,Country
 3,Aerovironment,USA
+
 --- Written drones CSV ---
 ID,Manufacturer-id,Model,Price
 2,1,Phantom,1499
